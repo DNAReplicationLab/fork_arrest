@@ -1,0 +1,8 @@
+[submodule "DNAscentTools"]
+	path = DNAscentTools
+	url = https://github.com/DNAReplicationLab/DNAscentTools.git
+	branch = main
+	update = rebase
+[submodule "scripts/DNAscentTools"]
+	path = scripts/DNAscentTools
+	url = https://github.com/DNAReplicationLab/DNAscentTools
