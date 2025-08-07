@@ -279,7 +279,7 @@ noting how the first get raw data command has been slightly modified.
 ```shell
   python get_raw_data_from_modBAM.py $bamfile $readid $contig $start $end False ${readid}_${contig}_R_|\
     sed '1i\detectIndex\tposOnRef\tprobBrdU' |\
-    python get_model_pauses_raw_sgm.py --thres 0.5 --width 3000 --low 0.1 --high 0.7 --iter 20 --tol 0.03
+    python get_model_pauses_raw_sgm.py --thres 0.5 --width 3000 --low 0.1 --high 0.7 --iter 20 --tol 0.03 |\
     python process_model_pause_results_raw_sgm.py --width 3000 --low 0.1 --high 0.7 |\
     python process_model_pause_results_analysis.py \
         --modbam "$bamfile"\
