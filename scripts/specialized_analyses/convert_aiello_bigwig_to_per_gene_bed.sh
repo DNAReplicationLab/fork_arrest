@@ -14,7 +14,7 @@
 # usage
 # -----
 # sbatch convert_aiello_bigwig_to_per_gene_bed.sh $prefix_bigwig $ref_fai $gene_bed $tRNA_rDNA_bed [$chrM_optional] \
-#   [$keyword_optional] [$focus_tss_or_tes_optional] [$grow_bp_optional] [$grow_which_end_optional]
+#   [$keyword_optional]
 # Can use bash instead of sbatch but might take a few minutes.
 # [] means optional arguments. To specify an optional argument, you must specify all optional arguments to the left of
 # it as well, and you must remove the square brackets for the ones you want to specify.
@@ -32,25 +32,6 @@
 #                   is $prefix_combine_w_gene.no_tRNA_rDNA.bed. If keyword is say "ORF", then the output file name will
 #                   be $prefix_combine_w_ORF.no_tRNA_rDNA.bed. This is useful when you want to analyze different
 #                   annotations separately.
-# focus_tss_or_tes_optional: (default "no") choices are "no", "TSS", "TES". If "TSS" or "TES" is chosen, then the
-#                            gene_bed is shrunk to a zero0centered interval at the TSS or TES respectively.
-#                            This is useful if you want to measure the signal only around the TSS or TES.
-#                            If "no" is chosen, then the whole gene is used. NOTE that if you set this to TSS or TES,
-#                            you must also set grow_bp_optional to a positive integer, otherwise all the intervals
-#                            will be of size 0 and you won't capture any signal, so the program is designed to fail.
-# grow_bp_optional: (default 0) grow each interval in the gene_bed file by +- so many bp. This is useful if
-#                   you want to capture the signal around the element (TES or TSS) as well. As stated
-#                   above, if you set focus_tss_or_tes_optional to TSS or TES, you must set this to a positive integer.
-#                   If you set focus_tss_or_tes_optional to "no", then you will get an error if you set this.
-# grow_which_end_optional: (default 'both') choices are 'both', '5p', '3p', 'start', 'end'.
-#                           Default 'both' means each interval in the bed file is grown by +- grow_bp.
-#                           If '5p' is chosen, then start -> start - grow_bp and end -> end if strand is + and
-#                           start -> start and end -> end + grow_bp if strand is -.
-#                           If '3p' is chosen, then start -> start and end -> end + grow_bp if strand is + and
-#                           start -> start - grow_bp and end -> end if strand is -.
-#                           If 'start' is chosen, then start -> start - grow_bp and end -> end irrespective of strand.
-#                           If 'end' is chosen, then start -> start and end -> end + grow_bp irrespective of strand.
-#                           In the above 'start' and 'end' refer to the start and end of the interval in the bed file.
 
 # logic
 # -----
@@ -78,9 +59,6 @@ gene_bed=${3:-}
 tRNA_rDNA_bed=${4:-}
 chrM=${5:-chrM}
 keyword=${6:-gene}
-focus_tss_or_tes=${7:-no}
-grow_bp=${8:-0}
-grow_which_end=${9:-both}
 
 # convert paths to absolute paths
 prefix=$(realpath "$prefix")
@@ -116,8 +94,7 @@ insert_calling_script_header() {
 # check that the correct number of arguments were provided
 if [ "$#" -lt 4 ]; then
     >&2 echo "ERROR: incorrect number of arguments provided"
-    >&2 echo "usage: bash $0 \$prefix_bigwig \$ref_fai \$gene_bed \$tRNA_rDNA_bed \$chrM_optional \$keyword_optional "\
-    "[\$focus_tss_or_tes_optional] [\$grow_bp_optional] [\$grow_which_end_optional]"
+    >&2 echo "usage: bash $0 \$prefix_bigwig \$ref_fai \$gene_bed \$tRNA_rDNA_bed \$chrM_optional \$keyword_optional "
     >&2 echo "For more details on what these parameters mean, see the comments in the script."
     >&2 echo "Exiting."
     exit 1;
@@ -180,41 +157,6 @@ if [ ! "$(< "$tRNA_rDNA_bed" python validate_bed_against_fai.py "$ref_fai" )" ==
   exit 1;
 fi
 
-# check that focus_tss_or_tes is one of the allowed values
-if [ "$focus_tss_or_tes" != "no" ] && [ "$focus_tss_or_tes" != "TSS" ] && [ "$focus_tss_or_tes" != "TES" ]; then
-    >&2 echo "ERROR: focus_tss_or_tes must be one of 'no', 'TSS', or 'TES'"
-    >&2 echo "Exiting."
-    exit 1;
-fi
-
-# check that grow_bp is a number
-if ! [[ "$grow_bp" =~ ^[0-9]+$ ]]; then
-    >&2 echo "ERROR: grow_bp must be a number"
-    >&2 echo "Exiting."
-    exit 1;
-fi
-
-# check that if focus_tss_or_tes is set to "no", then grow_bp must be 0, and
-# if focus_tss_or_tes is set to "TSS" or "TES", then grow_bp must be a positive integer
-if [ "$focus_tss_or_tes" == "no" ] && [ "$grow_bp" -ne 0 ]; then
-    >&2 echo "ERROR: if focus_tss_or_tes is set to 'no', then grow_bp must be 0"
-    >&2 echo "Exiting."
-    exit 1;
-fi
-if [ "$focus_tss_or_tes" != "no" ] && [ "$grow_bp" -le 0 ]; then
-    >&2 echo "ERROR: if focus_tss_or_tes is set to 'TSS' or 'TES', then grow_bp must be a positive integer"
-    >&2 echo "Exiting."
-    exit 1;
-fi
-
-# check that grow_which_end is one of the allowed values
-if [ "$grow_which_end" != "both" ] && [ "$grow_which_end" != "5p" ] && [ "$grow_which_end" != "3p" ] &&\
-   [ "$grow_which_end" != "start" ] && [ "$grow_which_end" != "end" ]; then
-    >&2 echo "ERROR: grow_which_end must be one of 'both', '5p', '3p', 'start', or 'end'"
-    >&2 echo "Exiting."
-    exit 1;
-fi
-
 # make some temp files
 tmp_file_plus_bg=$(mktemp -p "$tmpDir")
 tmp_file_minus_bg=$(mktemp -p "$tmpDir")
@@ -251,41 +193,9 @@ bedtools unionbedg -i "$tmp_file_minus_bg" "$tmp_file_minus_bg" -empty -g "$ref_
   awk -F' ' -v OFS=" " -v step=10 "$awk_zero_expand_cmd" > "$tmp_file_minus_bg_with_zero" &
 wait
 
-# perform bed file alterations here according to the chosen options of focus_tss_or_tes and grow_bp
-tmp_gene_bed_step_1=$(mktemp -p "$tmpDir")
-tmp_out_file=$(mktemp -p "$tmpDir")
-# shellcheck disable=SC1010
-# shellcheck disable=SC2016
-mlr --tsv --implicit-csv-header --headerless-csv-output --skip-comments filter '($6=="+" || $6=="-")' \
-  then put '
-    begin {
-      @focus_tss_or_tes = "'"$focus_tss_or_tes"'";
-    };
-    if((@focus_tss_or_tes=="TSS" && $6=="+") || (@focus_tss_or_tes=="TES" && $6=="-")){
-      $3=$2;
-    } elif((@focus_tss_or_tes=="TSS" && $6=="-") || (@focus_tss_or_tes=="TES" && $6=="+")){
-      $2=$3;
-    } elif(@focus_tss_or_tes!="no" && @focus_tss_or_tes!="TSS" && @focus_tss_or_tes!="TES"){
-      # we are in error if we reach here
-      $3=0;
-      $2=0;
-    }' "$gene_bed" > "$tmp_gene_bed_step_1"
-
-< "$tmp_gene_bed_step_1" python grow_and_split_bed_file_by_column_value_and_length.py \
-  --grow-region-num-bases "$grow_bp" --fai-file "$ref_fai" --output-prefix "$tmpDir"/expand_bed \
-  --allow-self-intersections --grow-which-end "$grow_which_end" > "$tmp_out_file"
-
-# ensure that only one bed file is output
-if [ "$(jq -r '. | length' "$tmp_out_file")" -ne 1 ]; then
-  >&2 echo "ERROR: expected only one bed file to be output but got more than one."
-  >&2 echo "Exiting."
-  exit 1;
-fi
-tmp_gene_bed_step_2="$(jq -r '.[0].bed_file' "$tmp_out_file")"
-
 # calculate mean signal per gene and remove any genes that overlap with tRNAs or rDNAs
 bash calculate_bed_overlap_bedgraph_signal_per_bed_entry.sh "$tmp_file_plus_bg_with_zero"\
-  "$tmp_file_minus_bg_with_zero" "$ref_fai" "$tmp_gene_bed_step_2" "$chrM" |\
+  "$tmp_file_minus_bg_with_zero" "$ref_fai" "$gene_bed" "$chrM" |\
     bedtools intersect -v -a - -b "$tRNA_rDNA_bed" |\
       insert_calling_script_header "$@" > "$output_file"
 
