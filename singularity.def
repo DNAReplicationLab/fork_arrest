@@ -94,7 +94,7 @@ cd ..
 rm -rf samtools-1.21
 cd /opt/software/
 
-## R
+## R install part 1
 dnf -y install epel-release
 dnf config-manager --set-enabled crb
 develInstalls="readline-devel zlib-devel libX11-devel libX11 libXt-devel libXt bzip2-devel xz-devel \
@@ -113,7 +113,7 @@ ln -s /opt/R/${R_VERSION}/bin/R /usr/local/bin/R
 ln -s /opt/R/${R_VERSION}/bin/Rscript /usr/local/bin/Rscript
 dnf -y install openssl-devel libxml2-devel netcdf-devel abseil-cpp-devel cmake unixODBC-devel postgresql-devel udunits2-devel proj-devel sqlite-devel geos-devel
 
-## modkit
+## modkit install part 1
 export CARGO_HOME=/opt/software/cargo_home
 export RUSTUP_HOME=/opt/software/rustup_home
 export PATH=$PATH:$CARGO_HOME/bin
@@ -130,6 +130,7 @@ source "$CARGO_HOME/env"
 rustup install stable
 rustup default stable
 
+## finish R install
 for k in ggplot2 hexbin ragg magick devtools rsvg RIdeogram patchwork svglite viridis tidyverse jsonlite; do
     R -e "install.packages('"$k"', repos=\"https://cran.rstudio.com/\", dependencies=TRUE)"
 done
@@ -217,6 +218,7 @@ dnf -y install ${package}
 rm -rf ${package}
 cd $pwd
 
+## finish modkit install
 pwd=$(pwd)
 git clone https://github.com/nanoporetech/modkit.git /opt/software/modkit_src
 cd /opt/software/modkit_src
