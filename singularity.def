@@ -1,6 +1,6 @@
 BootStrap: yum
 OSVersion: 9
-MirrorURL: http://yum-repos.hpccluster/AlmaLinux/9/os/$basearch/
+MirrorURL: https://repo.almalinux.org/almalinux/9/BaseOS/$basearch/os/
 Include: yum
 
 # Singularity definition file was created by ST using knowledge of similar singularity files
@@ -102,16 +102,40 @@ develInstalls="readline-devel zlib-devel libX11-devel libX11 libXt-devel libXt b
                 mesa-libGLU-devel libpng-devel freetype-devel libjpeg-devel openssl-devel \
                 cairo-devel harfbuzz-devel fribidi-devel libtiff-devel libstdc++-static glibc-static"
 dnf -y install openblas-devel librsvg2-devel libcurl which texlive-xcolor ${develInstalls}
+dnf -y install libwebp-devel poppler-cpp-devel tesseract-devel ImageMagick ImageMagick-c++-devel gdal-devel
+dnf -y install --nogpgcheck https://mirrors.rpmfusion.org/free/el/rpmfusion-free-release-$(rpm -E %rhel).noarch.rpm
+dnf -y install ffmpeg-free-devel
 export R_VERSION=4.1.2
 curl -O https://cdn.rstudio.com/r/rhel-9/pkgs/R-${R_VERSION}-1-1.x86_64.rpm
 dnf -y install R-${R_VERSION}-1-1.x86_64.rpm
 rm -rf R-${R_VERSION}-1-1.x86_64.rpm
 ln -s /opt/R/${R_VERSION}/bin/R /usr/local/bin/R
 ln -s /opt/R/${R_VERSION}/bin/Rscript /usr/local/bin/Rscript
-dnf -y install openssl-devel libxml2-devel
-for k in ggplot2 hexbin devtools rsvg RIdeogram ggthemes patchwork svglite viridis tidyverse jsonlite; do
+dnf -y install openssl-devel libxml2-devel netcdf-devel abseil-cpp-devel cmake unixODBC-devel postgresql-devel udunits2-devel proj-devel sqlite-devel geos-devel
+
+## modkit
+export CARGO_HOME=/opt/software/cargo_home
+export RUSTUP_HOME=/opt/software/rustup_home
+export PATH=$PATH:$CARGO_HOME/bin
+export PATH=$PATH:/opt/software/modkit/bin
+mkdir -p /opt/software/modkit_src
+mkdir -p /opt/software/modkit
+mkdir -p $CARGO_HOME
+mkdir -p $RUSTUP_HOME
+
+RUSTUP_HOME=$RUSTUP_HOME CARGO_HOME=$CARGO_HOME bash -c 'curl https://sh.rustup.rs -sSf | sh -s -- -y'
+
+source "$CARGO_HOME/env"
+
+rustup install stable
+rustup default stable
+
+for k in ggplot2 hexbin ragg magick devtools rsvg RIdeogram patchwork svglite viridis tidyverse jsonlite; do
     R -e "install.packages('"$k"', repos=\"https://cran.rstudio.com/\", dependencies=TRUE)"
 done
+wget https://cran.r-project.org/src/contrib/Archive/MatrixModels/MatrixModels_0.4-1.tar.gz
+R -e "install.packages(\"./MatrixModels_0.4-1.tar.gz\", repos = NULL, type = \"source\")"
+R -e "install.packages(\"ggthemes\", repos=\"https://cran.rstudio.com/\", dependencies=TRUE)"
 R -e "library(devtools);devtools::install_github(\"davidsjoberg/ggsankey\")"
 
 ## python
@@ -127,6 +151,8 @@ make
 make altinstall
 cd ..
 rm -rf Python-3.10.2
+cd /usr/local/bin
+ln -s python3.10 python
 cd $(pwd)
 
 # Python packages
@@ -191,23 +217,6 @@ dnf -y install ${package}
 rm -rf ${package}
 cd $pwd
 
-## modkit
-export CARGO_HOME=/opt/software/cargo_home
-export RUSTUP_HOME=/opt/software/rustup_home
-export PATH=$PATH:$CARGO_HOME/bin
-export PATH=$PATH:/opt/software/modkit/bin
-mkdir -p /opt/software/modkit_src
-mkdir -p /opt/software/modkit
-mkdir -p $CARGO_HOME
-mkdir -p $RUSTUP_HOME
-
-RUSTUP_HOME=$RUSTUP_HOME CARGO_HOME=$CARGO_HOME bash -c 'curl https://sh.rustup.rs -sSf | sh -s -- -y'
-
-source "$CARGO_HOME/env"
-
-rustup install stable
-rustup default stable
-
 pwd=$(pwd)
 git clone https://github.com/nanoporetech/modkit.git /opt/software/modkit_src
 cd /opt/software/modkit_src
@@ -240,3 +249,4 @@ rm -rf seqkit_linux_amd64.tar.gz
 
 # cleanup
 # no clean up for now
+
