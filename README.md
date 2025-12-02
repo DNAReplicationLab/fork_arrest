@@ -116,7 +116,8 @@ in addition to standard formats such as pdf, png etc. These formats are all well
 please google them if you are not familiar with them. The unfamiliar formats are: detect and forkSense which are
 used by DNAscent detect and pauseFile which is a tab-separated value format used by us. Please refer to the
 [documentation](https://dnascent.readthedocs.io/en/latest/detect.html) of the DNAscent repository for more
-information on detect and forkSense. The pauseFile format is described in the `documentation/` directory.
+information on detect and forkSense. The pauseFile format and the version of the forkSense format we use
+have been described in the `documentation/` directory.
 
 ## Using `sbatch` to run cluster commands
 
